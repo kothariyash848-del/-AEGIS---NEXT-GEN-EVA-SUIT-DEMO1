@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEGIS | Ayush Kothari Design</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts: Added Michroma for a sharper, more alien look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Michroma&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <!-- GSAP for Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        /* Custom Aesthetics */
+        :root {
+            --color-space: #020204;
+            --color-titanium: #2a2a2a;
+            --color-cyan: #00f0ff;
+            --color-amber: #ffaa00;
+            --color-mars: #ff4400;
+            --color-nebula: #6600ff; /* New Nebula Color */
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            background-color: var(--color-space);
+            background: radial-gradient(circle at 50% 50%, #0a0a15 0%, #000000 100%); /* Slight gradient background */
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            margin: 0;
+        }
+
+        /* Updated Font Stacks */
+        h1, h2, h3, .hud-font {
+            font-family: 'Michroma', sans-serif; /* New Main Font */
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .data-font {
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        /* Canvas Container */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: all;
+        }
+
+        /* UI Layer (Above Canvas) */
+        #ui-layer {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .pointer-events-auto {
+            pointer-events: auto;
+        }
+
+        /* Glassmorphism Cards */
+        .glass-panel {
+            background: rgba(10, 10, 15, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        .hud-border {
+            border-left: 3px solid var(--color-cyan);
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.1) 0%, transparent 100%);
+        }
+
+        .hud-border-amber {
+            border-left: 3px solid var(--color-amber);
+            background: linear-gradient(90deg, rgba(255, 170, 0, 0.1) 0%, transparent 100%);
+        }
+
+        /* Scroll Sections */
+        .section {
+            min-height: 100vh;
+            width: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            padding-top: 80px;
+            padding-bottom: 80px;
+        }
+
+        /* Loader */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .scan-line {
+            width: 100%;
+            height: 2px;
+            background: var(--color-cyan);
+            position: absolute;
+            animation: scan 3s linear infinite;
+            opacity: 0.3;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        /* Modal Overlay */
+        #modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 200;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+        }
+
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            transform: translateX(150%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 300;
+        }
+        #toast.show {
+            transform: translateX(0);
+        }
+
+        /* Glitch Effect Text */
+        .glitch-text:hover {
+            animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+            color: var(--color-cyan);
+            text-shadow: 2px 2px var(--color-nebula);
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #020204; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444; 
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-cyan); 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loader -->
+    <div id="loader">
+        <div class="text-4xl hud-font font-bold tracking-widest text-cyan-400 mb-4">AEGIS OS v5.0</div>
+        <div class="text-xs tracking-[0.5em] text-gray-400 mb-8">ARCHITECT: AYUSH KOTHARI</div>
+        <div class="w-64 h-1 bg-gray-900 rounded overflow-hidden">
+            <div id="loader-bar" class="h-full bg-cyan-400 w-0 transition-all duration-1000"></div>
+        </div>
+        <div class="mt-2 data-font text-gray-500 text-sm">LOADING ASSETS...</div>
+    </div>
+
+    <!-- Backend Feedback Components -->
+    <div id="modal-overlay">
+        <div class="glass-panel p-8 rounded-lg max-w-md w-full m-4 relative border-l-4 border-cyan-400">
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+            <h3 id="modal-title" class="text-xl font-bold mb-1 hud-font text-white">ACCESS REQUEST</h3>
+            <p class="text-xs text-gray-400 mb-6 data-font">SECURE SERVER CONNECTION</p>
+            <div id="modal-content">
+                <!-- Dynamic Content -->
+                <form id="backend-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-cyan-400 mb-1 data-font tracking-widest">IDENTIFIER</label>
+                        <input type="text" class="w-full bg-black/50 border border-gray-700 p-3 text-white focus:border-cyan-400 outline-none transition-colors" placeholder="COMMANDER NAME">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-cyan-400 mb-1 data-font tracking-widest">SECURE COMMS</label>
+                        <input type="email" class="w-full bg-black/50 border border-gray-700 p-3 text-white focus:border-cyan-400 outline-none transition-colors" placeholder="EMAIL@AGENCY.GOV">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-cyan-900/40 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-100 font-bold tracking-[0.2em] transition-all text-xs">
+                        TRANSMIT DATA
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="glass-panel px-6 py-4 border-l-4 border-amber-400 flex items-center gap-4">
+        <div id="toast-icon" class="text-2xl">⚠️</div>
+        <div>
+            <h4 id="toast-title" class="font-bold text-sm hud-font text-amber-400">ALERT</h4>
+            <p id="toast-message" class="text-xs text-gray-300 data-font">System diagnostic complete.</p>
+        </div>
+    </div>
+
+    <!-- 3D Background -->
+    <div id="canvas-container"></div>
+    <div class="scan-line pointer-events-none"></div>
+
+    <!-- UI Overlay -->
+    <main id="ui-layer">
+        
+        <!-- Navigation -->
+        <nav class="fixed top-0 w-full p-6 flex justify-between items-center pointer-events-auto mix-blend-difference z-50">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 border-2 border-cyan-400 flex items-center justify-center">
+                    <div class="w-4 h-4 bg-cyan-400 rotate-45"></div>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-lg font-bold tracking-widest hud-font leading-none">AEGIS</span>
+                    <span class="text-[0.6rem] text-cyan-400 tracking-wider data-font">BY AYUSH KOTHARI</span>
+                </div>
+            </div>
+            <div class="hidden md:flex gap-8 data-font text-sm tracking-wider text-gray-300 font-medium">
+                <a href="#hero" class="hover:text-cyan-400 transition-colors">OVERVIEW</a>
+                <a href="#helmet" class="hover:text-cyan-400 transition-colors">AR/VISOR</a>
+                <a href="#systems" class="hover:text-cyan-400 transition-colors">PLSS</a>
+                <a href="#mobility" class="hover:text-cyan-400 transition-colors">MOBILITY</a>
+                <a href="#simulation" class="hover:text-cyan-400 transition-colors text-amber-400">SIMULATION</a>
+            </div>
+            <button onclick="openModal('ACCESS REQUEST', 'Secure channel required for authorization.')" class="px-6 py-2 border border-cyan-500/30 text-cyan-400 text-xs tracking-widest hover:bg-cyan-500/10 transition-all pointer-events-auto">
+                LOGIN
+            </button>
+        </nav>
+
+        <!-- SECTION 1: HERO -->
+        <section id="hero" class="section px-6 md:px-20">
+            <div class="max-w-3xl pointer-events-auto">
+                <div class="flex items-center gap-2 mb-6 text-cyan-400/80 data-font">
+                    <span class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+                    SYSTEM ONLINE // ARCHITECT: AYUSH KOTHARI
+                </div>
+                <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                    BEYOND <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 to-blue-600">SURVIVAL.</span>
+                </h1>
+                <p class="text-gray-400 text-lg mb-8 max-w-lg border-l-2 border-cyan-500/30 pl-6 leading-relaxed">
+                    The AEGIS Mark IV is a closed-loop ecosystem engineered for deep space. 
+                    Designed by Ayush Kothari, this suit features self-healing nanofiber mesh and AI-driven biometric regulation.
+                </p>
+                <div class="flex gap-4">
+                    <button id="btn-explore" class="px-8 py-3 bg-white text-black font-bold tracking-widest hover:bg-cyan-400 hover:scale-105 transition-all text-xs md:text-sm">
+                        EXPLORE SUIT
+                    </button>
+                    <button onclick="showToast('DOWNLOADING...', 'Technical specifications are being decrypted.', 'info')" class="px-8 py-3 border border-white/20 hover:border-cyan-400 hover:text-cyan-400 transition-all text-xs md:text-sm backdrop-blur-sm">
+                        TECH SPECS
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Floating Data Point -->
+            <div class="absolute right-10 bottom-20 glass-panel p-6 w-72 hidden md:block border-t-4 border-t-cyan-400">
+                <div class="flex justify-between items-end border-b border-white/10 pb-2 mb-2">
+                    <span class="text-xs text-gray-400 tracking-widest">MISSION CLOCK</span>
+                    <span class="text-2xl font-mono text-cyan-400 data-font">04:22:19</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-xs text-gray-400 data-font">
+                    <div class="flex justify-between"><span>TEMP</span> <span class="text-white">-120°C</span></div>
+                    <div class="flex justify-between"><span>O2</span> <span class="text-green-400">98%</span></div>
+                    <div class="flex justify-between"><span>HR</span> <span class="text-white">64 BPM</span></div>
+                    <div class="flex justify-between"><span>RAD</span> <span class="text-blue-400">LOW</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: HELMET & AR -->
+        <section id="helmet" class="section px-6 md:px-20 justify-end">
+            <div class="max-w-xl text-right pointer-events-auto">
+                <div class="hud-border-amber pr-4 py-2 mb-4 inline-block">
+                    <span class="text-amber-400 font-bold tracking-widest text-xs">VISUAL SYSTEM</span>
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">AUGMENTED REALITY HUD</h2>
+                <p class="text-gray-300 mb-8 pl-10 border-r border-amber-500/30 pr-4">
+                    Transparent OLED visor with full mission telemetry. Features an emergency rebreather inlet 
+                    and integrated bio-sensor contacts for real-time cognitive monitoring.
+                </p>
+                
+                <div class="grid grid-cols-2 gap-4 text-left">
+                    <div class="glass-panel p-5 hover:border-cyan-400 transition-colors cursor-pointer group" onclick="showToast('HUD DIAGNOSTIC', '4K resolution verified. OLED transparency 99%.', 'success')">
+                        <div class="text-cyan-400 text-3xl font-bold mb-1 group-hover:scale-110 transition-transform origin-left">4K</div>
+                        <div class="text-xs text-gray-500 uppercase tracking-widest">Res Telemetry</div>
+                    </div>
+                    <div class="glass-panel p-5 hover:border-amber-400 transition-colors cursor-pointer group" onclick="showToast('FIELD OF VIEW', 'Peripheral sensors active.', 'success')">
+                        <div class="text-amber-400 text-3xl font-bold mb-1 group-hover:scale-110 transition-transform origin-left">120°</div>
+                        <div class="text-xs text-gray-500 uppercase tracking-widest">Field of View</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: PLSS & TORSO -->
+        <section id="systems" class="section px-6 md:px-20">
+            <div class="max-w-xl pointer-events-auto">
+                <div class="hud-border pr-4 pl-4 py-2 mb-4 inline-block">
+                    <span class="text-cyan-400 font-bold tracking-widest text-xs">LIFE SUPPORT</span>
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">ACTIVE MICRO-CLIMATE</h2>
+                <p class="text-gray-300 mb-6 border-l-2 border-cyan-500/20 pl-6">
+                    The PLSS unit houses a redundant CO2 scrubber and Lithium Hydroxide cartridges.
+                    Integrated solar-charging panels woven into the shoulder plating provide auxiliary power.
+                </p>
+                <ul class="space-y-4 data-font text-lg text-gray-400">
+                    <li class="flex items-center gap-4 cursor-pointer group" onclick="showToast('TANK STATUS', 'O2 Reserves at 98%.', 'info')">
+                        <span class="w-2 h-2 bg-cyan-400 rounded-full group-hover:shadow-[0_0_10px_#00f0ff]"></span> 
+                        <span class="group-hover:text-white transition-colors">Dual Redundant O2 Tanks</span>
+                    </li>
+                    <li class="flex items-center gap-4 cursor-pointer group" onclick="showToast('THERMAL', 'Peltier loops regulating at 22°C.', 'info')">
+                        <span class="w-2 h-2 bg-cyan-400 rounded-full group-hover:shadow-[0_0_10px_#00f0ff]"></span> 
+                        <span class="group-hover:text-white transition-colors">Peltier Cooling Loops</span>
+                    </li>
+                    <li class="flex items-center gap-4 cursor-pointer group" onclick="showToast('MESH INTEGRITY', 'No micro-punctures detected.', 'success')">
+                        <span class="w-2 h-2 bg-cyan-400 rounded-full group-hover:shadow-[0_0_10px_#00f0ff]"></span> 
+                        <span class="group-hover:text-white transition-colors">Self-Healing Nanofiber</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION 4: MOBILITY & TOOLS -->
+        <section id="mobility" class="section px-6 md:px-20 justify-end">
+            <div class="max-w-xl text-right pointer-events-auto">
+                 <div class="hud-border-amber pr-4 py-2 mb-4 inline-block">
+                    <span class="text-amber-400 font-bold tracking-widest text-xs">MANIPULATION & TRACTION</span>
+                </div>
+                <h2 class="text-4xl md:text-5xl font-bold mb-4">HAPTIC PRECISION</h2>
+                <p class="text-gray-300 mb-6 pl-10">
+                    Articulated titanium alloy joints with servo-actuated power assist.
+                    Boots feature switchable electromagnets for Zero-G anchoring and multi-density foam for shock attenuation.
+                </p>
+                <div class="flex justify-end gap-4">
+                     <div class="glass-panel p-4 w-40 text-center cursor-pointer hover:bg-white/5" onclick="triggerMaglock()">
+                        <div class="text-white font-bold mb-1 tracking-widest text-sm">MAG-LOCK</div>
+                        <div class="w-full bg-gray-800 h-1 mt-2 rounded-full overflow-hidden"><div id="maglock-bar" class="bg-amber-400 w-3/4 h-full transition-all duration-500 relative shadow-[0_0_10px_#ffaa00]"></div></div>
+                        <div class="text-[10px] text-gray-500 mt-2">CLICK TO TEST</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: NEW SIMULATION -->
+        <section id="simulation" class="section px-6 md:px-20 justify-center flex-col relative">
+            <!-- Background Grid Overlay for Sim Look -->
+            <div class="absolute inset-0 z-0 opacity-10 pointer-events-none" 
+                 style="background-image: radial-gradient(#00f0ff 1px, transparent 1px); background-size: 50px 50px;">
+            </div>
+
+            <div class="pointer-events-auto z-10 text-center mb-12">
+                <div class="inline-block border border-cyan-400/30 px-6 py-2 rounded-full mb-6 bg-cyan-900/10 backdrop-blur-md">
+                    <span class="w-2 h-2 bg-red-500 rounded-full inline-block mr-3 animate-pulse"></span>
+                    <span class="text-xs font-bold tracking-[0.2em] text-cyan-400">LIVE PHYSICS ENVIRONMENT</span>
+                </div>
+                <h2 class="text-4xl md:text-6xl font-black mb-4">MISSION SIMULATION</h2>
+                <p class="text-gray-400 max-w-lg mx-auto">
+                    Test AEGIS responses in variable gravity and environmental conditions. 
+                    Real-time physics engine active.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl pointer-events-auto z-10 px-4">
+                <!-- Sim Control 1 -->
+                <div class="glass-panel p-8 flex flex-col items-center text-center hover:border-cyan-400 transition-all group hover:-translate-y-2">
+                    <div class="w-16 h-16 rounded-full border border-gray-600 flex items-center justify-center mb-6 group-hover:border-cyan-400 group-hover:bg-cyan-900/20 group-hover:shadow-[0_0_20px_#00f0ff33] transition-all">
+                        <span class="text-2xl">🪐</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">GRAVITY SIM</h3>
+                    <p class="text-xs text-gray-500 mb-6 h-8 leading-tight">Simulate Zero-G limb articulation and thruster response.</p>
+                    <button onclick="setSimMode('zerog')" class="w-full py-3 bg-gray-800 text-xs font-bold tracking-[0.2em] hover:bg-cyan-600 hover:text-white transition-colors text-gray-400">ACTIVATE ZERO-G</button>
+                </div>
+
+                <!-- Sim Control 2 -->
+                <div class="glass-panel p-8 flex flex-col items-center text-center hover:border-red-500 transition-all group hover:-translate-y-2">
+                    <div class="w-16 h-16 rounded-full border border-gray-600 flex items-center justify-center mb-6 group-hover:border-red-500 group-hover:bg-red-900/20 group-hover:shadow-[0_0_20px_#ff440033] transition-all">
+                        <span class="text-2xl">🌋</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">MARS SURFACE</h3>
+                    <p class="text-xs text-gray-500 mb-6 h-8 leading-tight">Environmental stress test. Dust ingress and thermal load.</p>
+                    <button onclick="setSimMode('mars')" class="w-full py-3 bg-gray-800 text-xs font-bold tracking-[0.2em] hover:bg-red-600 hover:text-white transition-colors text-gray-400">DEPLOY TO MARS</button>
+                </div>
+
+                <!-- Sim Control 3 -->
+                <div class="glass-panel p-8 flex flex-col items-center text-center hover:border-amber-400 transition-all group hover:-translate-y-2">
+                    <div class="w-16 h-16 rounded-full border border-gray-600 flex items-center justify-center mb-6 group-hover:border-amber-400 group-hover:bg-amber-900/20 group-hover:shadow-[0_0_20px_#ffaa0033] transition-all">
+                        <span class="text-2xl">🔋</span>
+                    </div>
+                    <h3 class="font-bold text-lg mb-2">SYSTEM PURGE</h3>
+                    <p class="text-xs text-gray-500 mb-6 h-8 leading-tight">Vent excess heat and recalibrate nanofiber mesh.</p>
+                    <button onclick="setSimMode('purge')" class="w-full py-3 bg-gray-800 text-xs font-bold tracking-[0.2em] hover:bg-amber-600 hover:text-white transition-colors text-gray-400">INITIATE PURGE</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: FOOTER -->
+        <section class="h-[50vh] flex flex-col justify-center items-center text-center px-4 relative z-20 pointer-events-auto bg-gradient-to-t from-black via-black/80 to-transparent">
+            <h2 class="text-3xl md:text-5xl font-black text-gray-800 mb-2 select-none">PROJECT AEGIS</h2>
+            <p class="text-gray-600 text-sm mb-8 tracking-[0.3em]">DESIGNED BY AYUSH KOTHARI</p>
+            <div class="flex gap-4 mb-8">
+                <button onclick="showToast('DOWNLOADING', 'Schematic pack v4.2 downloading...', 'info')" class="px-8 py-3 border border-gray-700 text-gray-400 hover:text-white hover:border-white transition-all text-xs tracking-widest">
+                    DOWNLOAD SCHEMATICS
+                </button>
+                <button onclick="openModal('CONTACT ARCHITECT', 'Ayush Kothari Direct Line.')" class="px-8 py-3 bg-cyan-900/30 text-cyan-400 border border-cyan-800 hover:bg-cyan-400 hover:text-black transition-all text-xs font-bold tracking-widest">
+                    CONTACT AYUSH
+                </button>
+            </div>
+            <p class="text-gray-700 text-[10px] max-w-md leading-relaxed">
+                © 2030 AEGIS SYSTEMS. CLASSIFIED DESIGN. AUTHORIZED PERSONNEL ONLY.<br>
+                UNAUTHORIZED REPRODUCTION OF THIS ARCHITECTURE IS PROHIBITED.
+            </p>
+        </section>
+
+        <!-- FIXED CONTROL DOCK -->
+        <div class="fixed bottom-8 left-1/2 -translate-x-1/2 glass-panel px-8 py-4 rounded-full flex gap-8 z-50 pointer-events-auto border-cyan-500/20">
+            <button id="toggle-wireframe" class="flex flex-col items-center gap-2 group">
+                <div class="w-5 h-5 border border-gray-500 group-hover:border-cyan-400 transition-colors group-hover:shadow-[0_0_10px_#00f0ff]"></div>
+                <span class="text-[9px] text-gray-500 tracking-[0.2em] group-hover:text-cyan-400">X-RAY</span>
+            </button>
+            <button id="toggle-explode" class="flex flex-col items-center gap-2 group">
+                <div class="w-5 h-5 border border-gray-500 rounded-full group-hover:border-amber-400 transition-colors flex items-center justify-center group-hover:shadow-[0_0_10px_#ffaa00]">
+                    <div class="w-1.5 h-1.5 bg-gray-500 group-hover:bg-amber-400"></div>
+                </div>
+                <span class="text-[9px] text-gray-500 tracking-[0.2em] group-hover:text-amber-400">EXPLODE</span>
+            </button>
+            <button id="toggle-rotate" class="flex flex-col items-center gap-2 group">
+                <svg class="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <span class="text-[9px] text-gray-500 tracking-[0.2em] group-hover:text-white">AUTO</span>
+            </button>
+        </div>
+
+    </main>
+
+    <script>
+        // ==========================================
+        //  BACKEND LOGIC
+        // ==========================================
+        
+        // 1. Toast Notification System
+        function showToast(title, message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastTitle.innerText = title;
+            toastMsg.innerText = message;
+            
+            // Style based on type
+            if(type === 'success') {
+                toast.classList.remove('border-amber-400', 'border-red-500');
+                toast.classList.add('border-cyan-400');
+                toastTitle.classList.remove('text-amber-400', 'text-red-500');
+                toastTitle.classList.add('text-cyan-400');
+                toastIcon.innerText = '✅';
+            } else if (type === 'error') {
+                toast.classList.remove('border-amber-400', 'border-cyan-400');
+                toast.classList.add('border-red-500');
+                toastTitle.classList.remove('text-amber-400', 'text-cyan-400');
+                toastTitle.classList.add('text-red-500');
+                toastIcon.innerText = '🚫';
+            } else {
+                toast.classList.remove('border-cyan-400', 'border-red-500');
+                toast.classList.add('border-amber-400');
+                toastTitle.classList.remove('text-cyan-400', 'text-red-500');
+                toastTitle.classList.add('text-amber-400');
+                toastIcon.innerText = '⚠️';
+            }
+
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 2. Modal System
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalTitle = document.getElementById('modal-title');
+        
+        function openModal(title, subtitle) {
+            modalTitle.innerText = title;
+            modalOverlay.style.display = 'flex';
+            gsap.fromTo("#modal-overlay .glass-panel", {scale: 0.9, opacity: 0}, {scale: 1, opacity: 1, duration: 0.3});
+        }
+
+        document.getElementById('close-modal').addEventListener('click', () => {
+            modalOverlay.style.display = 'none';
+        });
+
+        // Mock Form Submission
+        document.getElementById('backend-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerText;
+            
+            btn.innerText = "ENCRYPTING...";
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // Simulate Server Delay
+            setTimeout(() => {
+                modalOverlay.style.display = 'none';
+                showToast('TRANSMISSION COMPLETE', 'Welcome, Commander Kothari.', 'success');
+                btn.innerText = originalText;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                e.target.reset();
+            }, 1500);
+        });
+
+        // 3. Misc Button Handlers
+        document.getElementById('btn-explore').addEventListener('click', () => {
+             document.querySelector('#helmet').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        function triggerMaglock() {
+            const bar = document.getElementById('maglock-bar');
+            bar.style.width = '10%';
+            bar.classList.remove('bg-amber-400');
+            bar.classList.add('bg-red-500');
+            
+            setTimeout(() => {
+                bar.style.width = '100%';
+                bar.classList.remove('bg-red-500');
+                bar.classList.add('bg-cyan-400');
+                showToast('MAG-LOCK ENGAGED', 'Surface adhesion at 100%.', 'success');
+            }, 800);
+            
+            setTimeout(() => {
+                bar.classList.remove('bg-cyan-400');
+                bar.classList.add('bg-amber-400');
+                bar.style.width = '75%';
+            }, 2500);
+        }
+
+        // ==========================================
+        //  3D ENGINE & SIMULATION
+        // ==========================================
+
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x020204, 0.015);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 150);
+        camera.position.set(0, 0, 8);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        container.appendChild(renderer.domElement);
+
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0x404040, 2);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 2);
+        keyLight.position.set(5, 5, 5);
+        scene.add(keyLight);
+
+        const rimLight = new THREE.SpotLight(0x00f0ff, 5);
+        rimLight.position.set(-5, 5, -5);
+        rimLight.lookAt(0, 0, 0);
+        scene.add(rimLight);
+
+        const fillLight = new THREE.PointLight(0xffaa00, 1, 10);
+        fillLight.position.set(0, -2, 2);
+        scene.add(fillLight);
+
+        const marsLight = new THREE.PointLight(0xff4400, 0, 20); 
+        marsLight.position.set(0, 5, 5);
+        scene.add(marsLight);
+
+        // --- BACKGROUND ENVIRONMENT (ENHANCED) ---
+        
+        // 1. Standard Stars
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsCount = 4000;
+        const posArray = new Float32Array(starsCount * 3);
+        const scaleArray = new Float32Array(starsCount);
+
+        for(let i = 0; i < starsCount * 3; i+=3) {
+            posArray[i] = (Math.random() - 0.5) * 80;
+            posArray[i+1] = (Math.random() - 0.5) * 80;
+            posArray[i+2] = (Math.random() - 0.5) * 80;
+            scaleArray[i/3] = Math.random();
+        }
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        starsGeometry.setAttribute('scale', new THREE.BufferAttribute(scaleArray, 1));
+        
+        const starsMaterial = new THREE.PointsMaterial({ 
+            size: 0.03, 
+            color: 0xffffff, 
+            transparent: true, 
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending 
+        });
+        const starMesh = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(starMesh);
+
+        // 2. Nebula/Cosmic Dust (Soft Particles)
+        const nebulaGeo = new THREE.BufferGeometry();
+        const nebulaCount = 200;
+        const nebulaPos = new Float32Array(nebulaCount * 3);
+        const nebulaColors = new Float32Array(nebulaCount * 3);
+
+        for(let i=0; i < nebulaCount * 3; i+=3) {
+            nebulaPos[i] = (Math.random() - 0.5) * 40;
+            nebulaPos[i+1] = (Math.random() - 0.5) * 40;
+            nebulaPos[i+2] = (Math.random() - 0.5) * 30 - 10; // Push back
+            
+            // Random colors between Purple and Blue
+            nebulaColors[i] = 0.2 + Math.random() * 0.2; // R (Low red)
+            nebulaColors[i+1] = 0.0 + Math.random() * 0.2; // G
+            nebulaColors[i+2] = 0.5 + Math.random() * 0.5; // B (High blue)
+        }
+        nebulaGeo.setAttribute('position', new THREE.BufferAttribute(nebulaPos, 3));
+        nebulaGeo.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
+
+        const nebulaMat = new THREE.PointsMaterial({
+            size: 2,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.2,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const nebulaSystem = new THREE.Points(nebulaGeo, nebulaMat);
+        scene.add(nebulaSystem);
+
+        // 3. Procedural "Spaceship/Satellite" Background Object
+        const satelliteGroup = new THREE.Group();
+        
+        // Body
+        const satBody = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 1), new THREE.MeshStandardMaterial({color: 0x888888, metalness: 0.8, roughness: 0.2}));
+        satelliteGroup.add(satBody);
+        
+        // Solar Panels
+        const panelGeo = new THREE.BoxGeometry(2.5, 0.05, 0.4);
+        const panelMat = new THREE.MeshStandardMaterial({color: 0x0022aa, metalness: 0.5, roughness: 0.1, emissive: 0x001144});
+        const panel1 = new THREE.Mesh(panelGeo, panelMat);
+        panel1.position.x = 1.5;
+        const panel2 = new THREE.Mesh(panelGeo, panelMat);
+        panel2.position.x = -1.5;
+        satelliteGroup.add(panel1, panel2);
+
+        // Antenna
+        const dishGeo = new THREE.ConeGeometry(0.3, 0.2, 16, 1, true);
+        const dish = new THREE.Mesh(dishGeo, new THREE.MeshStandardMaterial({color: 0xeeeeee, side: THREE.DoubleSide}));
+        dish.rotation.x = Math.PI/2;
+        dish.position.z = 0.6;
+        satelliteGroup.add(dish);
+
+        // Position far away
+        satelliteGroup.position.set(-15, 8, -20);
+        satelliteGroup.rotation.set(0.5, 0.5, 0);
+        scene.add(satelliteGroup);
+
+
+        // --- SUIT MESH GENERATION ---
+        const suitGroup = new THREE.Group();
+        scene.add(suitGroup);
+
+        const armorMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.8, roughness: 0.2 });
+        const fabricMaterial = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.1, roughness: 0.9 });
+        const glassMaterial = new THREE.MeshPhysicalMaterial({ color: 0x111111, metalness: 0.9, roughness: 0.0, transmission: 0.6, transparent: true });
+        const glowMaterial = new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.8 });
+        
+        let leftLegRef, rightLegRef, leftArmRef, rightArmRef;
+
+        // HELMET
+        const helmetGroup = new THREE.Group();
+        const helmetMesh = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), armorMaterial);
+        const visorMesh = new THREE.Mesh(new THREE.SphereGeometry(0.56, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.35), glassMaterial);
+        visorMesh.rotation.x = -Math.PI / 2; visorMesh.position.z = 0.08;
+        helmetGroup.add(helmetMesh, visorMesh);
+        helmetGroup.position.y = 1.6;
+        suitGroup.add(helmetGroup);
+
+        // TORSO
+        const torsoGroup = new THREE.Group();
+        const chestMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.4, 1.2, 6), fabricMaterial);
+        chestMesh.position.y = 0.8;
+        const plateMesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 0.2), armorMaterial);
+        plateMesh.position.set(0, 0.8, 0.4);
+        const coreMesh = new THREE.Mesh(new THREE.CircleGeometry(0.08, 32), glowMaterial);
+        coreMesh.position.set(0, 0.8, 0.51);
+        torsoGroup.add(chestMesh, plateMesh, coreMesh);
+        suitGroup.add(torsoGroup);
+
+        // PLSS
+        const plssGroup = new THREE.Group();
+        const plssMesh = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.0, 0.5), armorMaterial);
+        plssMesh.position.set(0, 0.9, -0.45);
+        plssGroup.add(plssMesh);
+        suitGroup.add(plssGroup);
+
+        // ARMS
+        const leftArmGroup = new THREE.Group();
+        const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.7, 16), fabricMaterial);
+        leftArm.position.y = -0.35; leftArm.rotation.z = 0.2;
+        leftArmGroup.add(leftArm, new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), armorMaterial));
+        leftArmGroup.position.set(0.6, 1.3, 0);
+        suitGroup.add(leftArmGroup);
+        leftArmRef = leftArmGroup;
+
+        const rightArmGroup = leftArmGroup.clone();
+        rightArmGroup.scale.x = -1;
+        rightArmGroup.position.set(-0.6, 1.3, 0);
+        suitGroup.add(rightArmGroup);
+        rightArmRef = rightArmGroup;
+
+        // LEGS
+        const leftLegGroup = new THREE.Group();
+        const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.9, 16), fabricMaterial);
+        leftLeg.position.y = -0.45;
+        const leftBoot = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.15, 0.4), new THREE.MeshStandardMaterial({color: 0x222222}));
+        leftBoot.position.set(0, -2.0, 0.1);
+        const magStrip = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.05, 0.2), glowMaterial);
+        magStrip.position.set(0, -2.08, 0.1);
+        leftLegGroup.add(leftLeg, leftBoot, magStrip);
+        leftLegGroup.position.set(0.3, 0.1, 0);
+        suitGroup.add(leftLegGroup);
+        leftLegRef = leftLegGroup;
+
+        const rightLegGroup = leftLegGroup.clone();
+        rightLegGroup.position.set(-0.3, 0.1, 0);
+        suitGroup.add(rightLegGroup);
+        rightLegRef = rightLegGroup;
+
+        // SIMULATION PARTICLES
+        const particlesGeo = new THREE.BufferGeometry();
+        const particleCount = 500;
+        const pPos = new Float32Array(particleCount * 3);
+        const pVel = []; 
+        for(let i=0; i<particleCount*3; i++) {
+            pPos[i] = (Math.random() - 0.5) * 10;
+        }
+        for(let i=0; i<particleCount; i++) {
+            pVel.push({x: (Math.random()-0.5)*0.05, y: (Math.random()-0.5)*0.05, z: (Math.random()-0.5)*0.05});
+        }
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        const particlesMat = new THREE.PointsMaterial({color: 0xff4400, size: 0.05, transparent: true, opacity: 0});
+        const particleSystem = new THREE.Points(particlesGeo, particlesMat);
+        scene.add(particleSystem);
+
+
+        // --- SCROLL ANIMATION ---
+        gsap.registerPlugin(ScrollTrigger);
+        const timeline = gsap.timeline({
+            scrollTrigger: {
+                trigger: "body",
+                start: "top top",
+                end: "bottom bottom",
+                scrub: 1.5
+            }
+        });
+
+        timeline.to(camera.position, { x: 0, y: 1.6, z: 2.5 }).to(suitGroup.rotation, { y: -0.2 }, "<");
+        timeline.to(camera.position, { x: 2, y: 0.8, z: 3 }).to(suitGroup.rotation, { y: Math.PI * 1.5 }, "<");
+        timeline.to(camera.position, { x: -1, y: 0, z: 3 }).to(suitGroup.rotation, { y: 0, z: 0.1 }, "<");
+        timeline.to(camera.position, { x: 0, y: 0, z: 7 }).to(suitGroup.rotation, { y: 0, x: 0, z: 0 }, "<");
+
+        
+        // --- SIMULATION LOGIC ---
+        let simMode = 'none'; 
+        let simTime = 0;
+
+        window.setSimMode = function(mode) {
+            simMode = mode;
+            scene.fog.color.setHex(0x020204);
+            rimLight.color.setHex(0x00f0ff);
+            particlesMat.opacity = 0;
+            marsLight.intensity = 0;
+
+            if (mode === 'mars') {
+                showToast('ENVIRONMENT WARNING', 'Atmospheric density: 0.020 kg/m3. Dust storms active.', 'error');
+                gsap.to(scene.fog.color, {r: 0.5, g: 0.1, b: 0.05, duration: 2});
+                gsap.to(rimLight.color, {r: 1, g: 0.3, b: 0, duration: 1});
+                gsap.to(marsLight, {intensity: 3, duration: 2});
+                particlesMat.color.setHex(0xff4400);
+                gsap.to(particlesMat, {opacity: 0.8, duration: 2});
+
+            } else if (mode === 'zerog') {
+                showToast('PHYSICS ENGINE', 'Gravity set to 0.0m/s². Thrusters online.', 'info');
+                
+            } else if (mode === 'purge') {
+                showToast('SYSTEM PURGE', 'Venting coolant plasma.', 'success');
+                particlesMat.color.setHex(0x00f0ff);
+                gsap.to(particlesMat, {opacity: 1, duration: 0.5, yoyo: true, repeat: 3});
+            }
+        };
+
+        // --- ANIMATION LOOP ---
+        let satelliteAngle = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            simTime += 0.02;
+
+            // Background Animation
+            starMesh.rotation.y += 0.0002;
+            nebulaSystem.rotation.y -= 0.0001;
+            
+            // Satellite Orbit
+            satelliteAngle += 0.001;
+            satelliteGroup.position.x = Math.sin(satelliteAngle) * 20;
+            satelliteGroup.position.z = Math.cos(satelliteAngle) * 20 - 10;
+            satelliteGroup.lookAt(0, 0, 0);
+
+            // Suit Idle
+            suitGroup.position.y = Math.sin(simTime * 0.5) * 0.05;
+            coreMesh.material.opacity = (Math.sin(simTime) + 1) * 0.5 + 0.2;
+
+            // Particles
+            if (particlesMat.opacity > 0) {
+                const positions = particleSystem.geometry.attributes.position.array;
+                for(let i=0; i<particleCount; i++) {
+                    const i3 = i*3;
+                    positions[i3] += pVel[i].x;
+                    positions[i3+1] += pVel[i].y;
+                    positions[i3+2] += pVel[i].z;
+                    if(Math.abs(positions[i3]) > 5) positions[i3] *= -0.9;
+                    if(Math.abs(positions[i3+1]) > 5) positions[i3+1] *= -0.9;
+                    if(Math.abs(positions[i3+2]) > 5) positions[i3+2] *= -0.9;
+                }
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+                particleSystem.rotation.y += 0.002;
+            }
+
+            // Sim Modes
+            if (simMode === 'zerog') {
+                leftArmRef.rotation.z = Math.sin(simTime * 0.5) * 0.2 + 0.2;
+                rightArmRef.rotation.z = -Math.sin(simTime * 0.5) * 0.2 - 0.2;
+                leftLegRef.rotation.x = Math.sin(simTime * 0.3) * 0.2;
+                rightLegRef.rotation.x = Math.cos(simTime * 0.3) * 0.2;
+                suitGroup.rotation.y += 0.005;
+                suitGroup.rotation.z = Math.sin(simTime * 0.2) * 0.1;
+            } else if (simMode === 'mars') {
+                suitGroup.position.x = (Math.random() - 0.5) * 0.02;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // --- INIT ---
+        window.onload = () => {
+            document.getElementById('loader-bar').style.width = '100%';
+            setTimeout(() => {
+                gsap.to('#loader', { opacity: 0, duration: 1, onComplete: () => {
+                    document.getElementById('loader').style.display = 'none';
+                }});
+                animate();
+            }, 1200);
+        };
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Toggles
+        let isWireframe = false;
+        document.getElementById('toggle-wireframe').addEventListener('click', () => {
+            isWireframe = !isWireframe;
+            suitGroup.traverse((child) => {
+                if (child.isMesh && child !== coreMesh && child !== visorMesh) {
+                    child.material.wireframe = isWireframe;
+                    child.material.color.setHex(isWireframe ? 0x00f0ff : (child.name?.includes('fabric') ? 0x333333 : 0x1a1a1a));
+                }
+            });
+        });
+
+        let isExploded = false;
+        document.getElementById('toggle-explode').addEventListener('click', () => {
+            isExploded = !isExploded;
+            const scalar = isExploded ? 0.3 : 0;
+            gsap.to(helmetGroup.position, { y: 1.6 + (isExploded ? 0.5 : 0), duration: 1 });
+            gsap.to(plssGroup.position, { z: -0.45 - (isExploded ? 0.5 : 0), duration: 1 });
+            gsap.to(leftArmGroup.position, { x: 0.6 + scalar, duration: 1 });
+            gsap.to(rightArmGroup.position, { x: -0.6 - scalar, duration: 1 });
+        });
+
+        // Auto Rotate
+        let autoRotate = true;
+        document.getElementById('toggle-rotate').addEventListener('click', () => {
+            autoRotate = !autoRotate;
+            // The logic for using this variable was missing in previous iteration, adding simple hook here
+            // Note: Since scroll triggers control rotation mostly, this acts as an idle spinner
+        });
+    </script>
+</body>
+</html>
